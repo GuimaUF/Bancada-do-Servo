@@ -633,18 +633,18 @@
     "subpart_id_separator": 0,
     "top_level_sheets": [
       {
-        "filename": "Bancada_Servo.kicad_sch",
-        "name": "Bancada_Servo",
+        "filename": "Bancada_Servo_Atualizada.kicad_sch",
+        "name": "Bancada_Servo_Atualizada",
         "uuid": "6cb0f276-091f-4c56-8b6e-c8e292be83ce"
       }
     ],
-    "used_designators": "U3-4,R1-5,C1",
+    "used_designators": "U2-4,R1-5,C1,BT1",
     "variants": []
   },
   "sheets": [
     [
       "6cb0f276-091f-4c56-8b6e-c8e292be83ce",
-      "Bancada_Servo"
+      "Bancada_Servo_Atualizada"
     ]
   ],
   "text_variables": {},
