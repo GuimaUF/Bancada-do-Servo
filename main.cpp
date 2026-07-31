@@ -21,12 +21,15 @@ Servo meuServo;
 HX711 balanca;
 
 unsigned long ultimaLeitura = 0;
-const unsigned long intervaloLeitura = 200; // ms entre leituras
+const unsigned long intervaloLeitura = 15; // ms entre leituras
 
 // Variável para fator de calibração da célula de carga
 // Você precisará ajustar esse valor experimentalmente usando um peso conhecido
 float coeficiente_angular = 0.0000454405524; // Substitua pelo seu valor (a)
 float coeficiente_linear  = -18.505760251396;    // Substitua pelo seu valor (b)
+
+float torque_maximo_ciclo = 0.0;
+
 void lerEImprimirDados(int angulo)
 {
   float busVoltage_V = ina219.getBusVoltage_V();       // tensão no barramento (lado da carga)
@@ -34,7 +37,7 @@ void lerEImprimirDados(int angulo)
   float current_mA = ina219.getCurrent_mA();           // corrente
   float power_mW = ina219.getPower_mW();               // potência
 
-  if (current_mA > 10.0 || current_mA < -0.0 || power_mW > 30.0) {
+  if (current_mA > 300.0 || current_mA < -0.0 || power_mW > 30.0) {
     return; // Encerra a função aqui e não imprime os valores absurdos
   }
 
@@ -54,20 +57,18 @@ if (forca_newtons < 0) {
     forca_newtons = 0;
   }
 
-  float torque_kgcm = (forca_newtons) * BRACO_SERVO_CM;
+  float torque_kgcm = (forca_newtons/9.80665) * BRACO_SERVO_CM;
 
-  Serial.print("tempo (ms):");
-  Serial.print(millis());
-  Serial.print("\nangulo (°):");
-  Serial.print(angulo);
+  if (torque_kgcm > torque_maximo_ciclo) {
+    torque_maximo_ciclo = torque_kgcm;
+  }
+
   Serial.print("\nVoltagem (V):");
   Serial.print(loadVoltage_V, 3);
   Serial.print("\nCorrente (mA):");
   Serial.print(current_mA, 2);
   Serial.print("\nPotencia (mW):");
   Serial.println(power_mW, 2);
-  Serial.print("Torque (kg.cm):");
-  Serial.println(torque_kgcm, 3);
 }
 
 void setup()
@@ -78,7 +79,7 @@ void setup()
   // Inicializa I2C nos pinos definidos
   Wire.begin(SDA_PIN, SCL_PIN);
 
-  // Inicializa o INA219
+  // Inicializa o INA219 e verifica se está conectado corretamente
   if (!ina219.begin())
   {
     Serial.println("Falha ao encontrar o INA219. Verifique as ligacoes!");
@@ -99,8 +100,6 @@ void setup()
   ESP32PWM::allocateTimer(0);
   meuServo.setPeriodHertz(50);           // frequência padrão de servos (50Hz)
   meuServo.attach(SERVO_PIN, 500, 2400); // pulso min/max em microssegundos
-
-  Serial.println("tempo_ms, angulo, tensao_V, corrente_mA, potencia_mW, torque_kgcm");
 }
 
 void loop()
@@ -110,8 +109,23 @@ void loop()
   static int passo = 1;
 
   angulo += passo;
-  if (angulo >= 120 || angulo <= 0)
+
+if (angulo >= 70 || angulo <= 0) {
     passo = -passo;
+    
+    // Se o ângulo chegou a 0, significa que um ciclo completo (ida e volta) terminou
+    if (angulo <= 0) {
+      Serial.println("\n========================================");
+      Serial.print("TORQUE MAXIMO DO CICLO: ");
+      Serial.print(torque_maximo_ciclo, 3);
+      Serial.println(" kg.cm");
+      Serial.println("========================================\n");
+      
+      // Reseta a variável para registrar o máximo do próximo ciclo
+      torque_maximo_ciclo = 0.0;
+  }
+  
+}
 
   meuServo.write(angulo);
 
